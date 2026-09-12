@@ -34,4 +34,17 @@ public class HttpParserTests
         Assert.Equal("POST", request.Method);
         Assert.Equal("Hello World", request.BodyText);
     }
+
+    [Fact]
+    public async Task ParseAsync_UrlEncodedBody_ParsesForm()
+    {
+        string raw = "POST /form HTTP/1.1\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 30\r\n\r\nname=Kapil+Mishra&role=student";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(raw));
+
+        var request = await HttpParser.ParseAsync(stream);
+
+        Assert.NotNull(request);
+        Assert.Equal("Kapil Mishra", request.Form["name"]);
+        Assert.Equal("student", request.Form["role"]);
+    }
 }

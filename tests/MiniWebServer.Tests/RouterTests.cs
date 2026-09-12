@@ -41,4 +41,51 @@ public class RouterTests
 
         Assert.Null(handler);
     }
+
+    [Fact]
+    public void Match_PatchRoute_ReturnsHandler()
+    {
+        var router = new Router();
+        router.Patch("/items/{id}", (req) => Task.FromResult(HttpResponse.Text($"Patching {req.RouteParams["id"]}")));
+
+        var req = new HttpRequest { Method = "PATCH", Path = "/items/7" };
+        var handler = router.Match(req);
+
+        Assert.NotNull(handler);
+        Assert.Equal("7", req.RouteParams["id"]);
+    }
+
+    [Fact]
+    public void Match_HeadRequest_FallsBackToGetHandler()
+    {
+        var router = new Router();
+        router.Get("/ping", (req) => Task.FromResult(HttpResponse.Text("pong")));
+
+        var req = new HttpRequest { Method = "HEAD", Path = "/ping" };
+        var handler = router.Match(req);
+
+        Assert.NotNull(handler);
+    }
+
+    [Fact]
+    public void GetAllowedMethods_PathWithGet_ReturnsHeadAndGet()
+    {
+        var router = new Router();
+        router.Get("/resource", (req) => Task.FromResult(HttpResponse.Text("ok")));
+
+        string[]? allowed = router.GetAllowedMethods("/resource");
+
+        Assert.NotNull(allowed);
+        Assert.Contains("GET", allowed);
+        Assert.Contains("HEAD", allowed);
+    }
+
+    [Fact]
+    public void GetAllowedMethods_UnknownPath_ReturnsNull()
+    {
+        var router = new Router();
+        router.Get("/resource", (req) => Task.FromResult(HttpResponse.Text("ok")));
+
+        Assert.Null(router.GetAllowedMethods("/missing"));
+    }
 }
