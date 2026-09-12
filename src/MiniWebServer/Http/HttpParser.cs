@@ -82,6 +82,19 @@ public static class HttpParser
                 totalRead += read;
             }
             request.Body = bodyBuffer;
+
+            string contentType = request.Headers.Get("Content-Type") ?? "";
+            if (contentType.StartsWith("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase))
+            {
+                var parsedForm = HttpUtility.ParseQueryString(request.BodyText);
+                foreach (string? key in parsedForm.AllKeys)
+                {
+                    if (key != null)
+                    {
+                        request.Form[key] = parsedForm[key] ?? "";
+                    }
+                }
+            }
         }
 
         return request;
