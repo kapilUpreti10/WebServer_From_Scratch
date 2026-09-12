@@ -38,7 +38,25 @@ public class HttpResponse
         Body = Encoding.UTF8.GetBytes(json)
     };
 
-    public byte[] ToBytes()
+    public static HttpResponse Redirect(string location, int statusCode = 302) => new()
+    {
+        StatusCode = statusCode,
+        StatusReason = GetDefaultReason(statusCode),
+        Headers =
+        {
+            ["Content-Type"] = "text/plain; charset=utf-8",
+            ["Location"] = location
+        },
+        Body = Encoding.UTF8.GetBytes("Redirecting to " + location)
+    };
+
+    public static HttpResponse Empty(int statusCode = 204) => new()
+    {
+        StatusCode = statusCode,
+        StatusReason = GetDefaultReason(statusCode)
+    };
+
+    public byte[] ToBytes(bool omitBody = false)
     {
         Headers["Content-Length"] = Body.Length.ToString();
         var sb = new StringBuilder();
@@ -50,9 +68,13 @@ public class HttpResponse
         sb.Append("\r\n");
 
         byte[] headerBytes = Encoding.UTF8.GetBytes(sb.ToString());
-        byte[] fullBytes = new byte[headerBytes.Length + Body.Length];
+        int bodyLength = omitBody ? 0 : Body.Length;
+        byte[] fullBytes = new byte[headerBytes.Length + bodyLength];
         Buffer.BlockCopy(headerBytes, 0, fullBytes, 0, headerBytes.Length);
-        Buffer.BlockCopy(Body, 0, fullBytes, headerBytes.Length, Body.Length);
+        if (!omitBody)
+        {
+            Buffer.BlockCopy(Body, 0, fullBytes, headerBytes.Length, Body.Length);
+        }
         return fullBytes;
     }
 
@@ -60,10 +82,28 @@ public class HttpResponse
     {
         200 => "OK",
         201 => "Created",
+        202 => "Accepted",
         204 => "No Content",
+        301 => "Moved Permanently",
+        302 => "Found",
+        303 => "See Other",
+        304 => "Not Modified",
+        307 => "Temporary Redirect",
+        308 => "Permanent Redirect",
         400 => "Bad Request",
+        401 => "Unauthorized",
+        403 => "Forbidden",
         404 => "Not Found",
+        405 => "Method Not Allowed",
+        408 => "Request Timeout",
+        411 => "Length Required",
+        413 => "Payload Too Large",
+        415 => "Unsupported Media Type",
+        422 => "Unprocessable Entity",
+        429 => "Too Many Requests",
         500 => "Internal Server Error",
-        _ => "OK"
+        501 => "Not Implemented",
+        503 => "Service Unavailable",
+        _ => "Unknown"
     };
 }
