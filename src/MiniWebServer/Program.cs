@@ -29,6 +29,16 @@ server.Router.Get("/users/{id}", (req) =>
 });
 server.Router.Post("/echo", (req) => Task.FromResult(HttpResponse.Text($"Echo: {req.BodyText}")));
 
+// Form body parsing (application/x-www-form-urlencoded)
+server.Router.Post("/form", (req) =>
+    Task.FromResult(HttpResponse.Text($"Hello, {req.Form.GetValueOrDefault("name", "stranger")}!")));
+
+// Redirect helper
+server.Router.Get("/redirect", (req) => Task.FromResult(HttpResponse.Redirect("/")));
+
+// 405: the path exists (registered for POST below) but not for GET
+server.Router.Post("/only-post", (req) => Task.FromResult(HttpResponse.Text("POST works")));
+
 server.Start();
 
 Console.WriteLine("Press ENTER to stop the server...");

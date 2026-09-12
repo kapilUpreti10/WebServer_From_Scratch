@@ -10,6 +10,8 @@ public class WebServer
 {
     private readonly IPAddress _ip;
     private readonly int _port;
+    private readonly int _keepAliveTimeoutMs;
+    private readonly int _maxRequestsPerConnection;
     private readonly TcpListener _listener;
     private readonly Router _router = new();
     private readonly MiddlewarePipeline _pipeline = new();
@@ -18,10 +20,12 @@ public class WebServer
     public Router Router => _router;
     public MiddlewarePipeline Pipeline => _pipeline;
 
-    public WebServer(IPAddress ip, int port)
+    public WebServer(IPAddress ip, int port, int keepAliveTimeoutMs = 5000, int maxRequestsPerConnection = 100)
     {
         _ip = ip;
         _port = port;
+        _keepAliveTimeoutMs = keepAliveTimeoutMs;
+        _maxRequestsPerConnection = maxRequestsPerConnection;
         _listener = new TcpListener(ip, port);
     }
 
@@ -38,10 +42,20 @@ public class WebServer
             {
                 return await routeHandler(request);
             }
+
+            // The path exists but not for this method -> 405 Method Not Allowed.
+            string[]? allowed = _router.GetAllowedMethods(request.Path);
+            if (allowed is { Length: > 0 })
+            {
+                var response = HttpResponse.Text("405 Method Not Allowed", 405);
+                response.Headers["Allow"] = string.Join(", ", allowed);
+                return response;
+            }
+
             return HttpResponse.Text("404 Not Found", 404);
         });
 
-        var connectionHandler = new ConnectionHandler(handlerPipeline);
+        var connectionHandler = new ConnectionHandler(handlerPipeline, _keepAliveTimeoutMs, _maxRequestsPerConnection);
 
         Task.Run(async () =>
         {
